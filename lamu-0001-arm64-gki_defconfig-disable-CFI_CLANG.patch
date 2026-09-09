@@ -1,0 +1,45 @@
+From 83de527dc357392b18dc423ad614865c575de08f Mon Sep 17 00:00:00 2001
+From: vigaz <pudimdebacon3@gmail.com>
+Date: Tue, 8 Sep 2026 23:32:37 -0300
+Subject: [PATCH] arm64: gki_defconfig: disable CFI_CLANG to match device
+ modules
+
+The device module tree (kernel_device_modules-6.6) already disables
+CFI_CLANG via lamu_overlay.config, but the GKI kernel kept it enabled.
+A CFI-instrumented kernel only accepts indirect calls into modules that
+carry a matching CFI type id, so first-stage init died on the very first
+module it loaded:
+
+  init: Loading module /lib/modules/bootprof.ko with args ''
+  CFI failure at do_one_initcall+0xd4/0x360
+          (target: init_module+0x0/0xf7c [bootprof]; expected type: 0x36b1c5a6)
+  Kernel panic - not syncing: Oops - CFI: Fatal exception
+
+Captured from expdb on real hardware (moto g05/lamu, MT6769V/CB). The
+kernel itself boots fine up to 'Run /init as init process' -- only the
+module handoff fails.
+
+Disabling on the kernel side is the permissive direction: a kernel built
+without CFI loads both CFI and non-CFI modules, while the reverse is not
+true. This also matters for the 434 prebuilt vendor blobs, which are
+built against Motorola's own kernel and cannot be recompiled.
+---
+ arch/arm64/configs/gki_defconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/configs/gki_defconfig b/arch/arm64/configs/gki_defconfig
+index 78048f40a8f6..c724c820bfd0 100644
+--- a/arch/arm64/configs/gki_defconfig
++++ b/arch/arm64/configs/gki_defconfig
+@@ -95,7 +95,7 @@ CONFIG_PTDUMP_STAGE2_DEBUGFS=y
+ CONFIG_KPROBES=y
+ CONFIG_JUMP_LABEL=y
+ CONFIG_SHADOW_CALL_STACK=y
+-CONFIG_CFI_CLANG=y
++# CONFIG_CFI_CLANG is not set
+ CONFIG_MODULES=y
+ CONFIG_MODULE_UNLOAD=y
+ CONFIG_MODVERSIONS=y
+-- 
+2.55.0
+
