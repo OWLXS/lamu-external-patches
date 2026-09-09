@@ -70,6 +70,14 @@ against Motorola's own kernel and can't be recompiled.
 **CFI needs to be consistent across both layers** -- touching only the
 module overlay isn't enough.
 
+Kleaf detail: the patch **removes the line** `CONFIG_CFI_CLANG=y` instead
+of swapping it for `# CONFIG_CFI_CLANG is not set`. The build runs
+`savedefconfig` and diffs it against the checked-in defconfig, and
+`savedefconfig` only emits non-default values -- since `CFI_CLANG` is a
+plain bool with no `default y`, the minimal form is the absence of the
+line. Writing `# ... is not set` makes the build fail with
+`ERROR: savedefconfig does not match`.
+
 ## Applying
 
 ```bash
